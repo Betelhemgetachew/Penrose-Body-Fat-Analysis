@@ -1,0 +1,159 @@
+---
+title: "pentos bodyfat dataset analysis"
+author: "Betelhem Getachew"
+date: "2024-02-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Pentose bodyfat analysis
+
+##installing packages and loading the BF dataset
+
+```{r cars,message=FALSE}
+library(dplyr)
+library(bbreg)
+library(ggplot2)
+data(BF)
+head(BF)
+?BF
+```
+It can be seen that Penrose body fat data-set is a data frame with 252 observations and 14 variables where all  variables are numerical.Response variable is the percentage of body fat and covariates represent several physiologic measurements related to 252 men. All covariates were rescaled dividing their original value by 100.
+
+##Correlation Analysis Task
+
+The correlation between two variables can be calculated using the corr() function. Here the target variable is bodyfat and the predictor variables are "age", "weight", "height", "neck", "chest", "abdomen", "hip", "thigh","knee","ankle","biceps","forearm", and "wrist". Since the corr() function takes two arguments,a vector containing all the predictor variables should be created which will be one of the arguments. The second argument will be "bodyfat". 
+
+
+```{r}
+correlation<-cor(BF[c("age","weight","height","neck","chest","abdomen","hip","thigh","knee","ankle","biceps","forearm","wrist")],BF$bodyfat)
+correlation
+```
+###Interpreting the results
+From the above result it can be seen that 
+  -"age" and "ankle circumference" have low or weak positive correlation(<0.3) with body-fat indicating that there is little linear relationship between the variables and body-fat . This  implies that age and ankle circumference do not have a strong influence on body-fat that is as "age" and "ankle circumference"increases, body-fat may also increase, but the relationship is not strong or consistent
+ 
+  -"neck","biceps","forarm", and "wrist" have medium positive correlation(0.3-0.5) with body fat which means they have a moderate linear relationship. This implies that as circumference of the "neck", "biceps", "forarm", and "wrist" increases body-fat tends to increase as well, but the relationship is not extremely strong.
+  
+  -"weight","chest","hip","thigh","knee" have strong positive correlation(0.5-0.7) with body-fat which shows there is a strong linear relationship.This indicates that when the circumference of "weight", "chest", "hip", "thigh", "knee"increase body fat also increases.
+  
+  -"height" has a low negative correlation with body-fat. This implies that that when height increases body-fat decreases but relationship is not strong.
+  
+  -"abdomen circumference"  has the strongest positive relationship(0.8134) with body-fat .This indicates that when body circumference increases body fat also increases and the relationship is strong.So body-fat percentage is highly influenced by abdomen circumference. 
+
+###identifying which variables exhibit a significant correlation with body fat percentage.
+
+####calculating the p-value
+
+To identify the variables that exhibit significant correlation,the cor.test() function is used. The p-value helps to identify if the correlation is statistically significant or not.The p-value is a measure of the evidence against the null hypothesis in a statistical hypothesis test. Therefore in order to find the p values between body-fat and all the predictor variables, "for loop" is used.
+
+```{r}
+variable_p_values <- list()
+
+for (variable in colnames(BF)) {
+  if (variable != "bodyfat") {
+    correlation_test <- cor.test(BF$bodyfat, BF[[variable]])
+    p_value <- correlation_test$p.value
+    variable_p_values[[variable]] <- p_value
+  }
+}
+print(variable_p_values)
+```
+
+ From the above result it can be seen that there are different p-values for the correlations between each of the predictor variables and the target variable(body-fat).
+ 
+ The p-value represents the probability of obtaining a correlation coefficient as extreme as the one observed (or more extreme) under the assumption that there is no true correlation in the population.
+  
+ Small p value suggests that the observed correlation is less likely to happen if there was no correlation between the variables. This suggests that the observed correlation is statistically significant, meaning the observed relationship is unlikely to have occurred by chance.
+
+ Large p value suggests that there is high probability of obtaining the correlation coefficient if there was no correlation between the variables.This indicates that any observed relationship could plausibly be due to random variation or chance.
+
+####Identifying variables with significant correlation
+The interpretation of a large or small p-value depends on the chosen significance level, often denoted as α. The significance level is a predetermined threshold typically set at 0.05 (or 5%).The "for loop" is used to identify predictive variables that have significant correlation with body-fat(where the p value is less than 0.05).
+
+```{r}
+significant_variables<-c()
+for (variable in colnames(BF)){
+  if(variable!="bodyfat"){
+   correlation_test<- cor.test(BF$bodyfat,BF[[variable]])
+  if(correlation_test$p.value<0.05){
+    significant_variables<- c(significant_variables, variable)
+  }
+   }
+}
+significant_variables
+```
+From the above result it can be  observed that all predictive variables except "Height" have significant correlation with body-fat. Since the p-value of the correlation between "height" and "body-fat" is 0.16(16%), which is greater than the typical significance level of 0.05, we would not have enough evidence to reject the null hypothesis. This means that there is not sufficient evidence to conclude that there is a statistically significant correlation between height and body fat.
+
+This implies that the correlation coefficient observed between height and body-fat is due to chance.
+
+##Simple Linear Regression Analysis Task:
+Abdomen circumference has the strongest positive correlation coefficient with body-fat that is 0.81.
+
+###visualizing the relation between abdomen circumference and percentage of bodyfat.
+```{r}
+ggplot(data=BF,aes(x=abdomen,y=bodyfat))+
+geom_point()+
+geom_smooth(method="lm")+
+labs(x="abdomen circumference in cm/100",y="percentage of body fat",title="Bodyfat vs Abdomen circumference")
+
+```
+The above scatter plot shows that there is a strong positive linear relationship between abdomen circumference and percentage of body-fat. This implies that as abdomen circumference increases, percentage of body-fat increases.
+
+###Linear regression model
+
+The lm(linear model) function is used to build a linear regression model. In the formula "bodyfat~abdomen", bodyfat=y and abdomen=x
+
+```{r}
+regression_model<-lm(bodyfat~abdomen,data=BF)
+summary(regression_model)
+```
+
+using the above model,one can make predictions of the body-fat percentage for any abdomen circumference in cm/100
+```{r}
+predicted_data <- data.frame(abdomen =c(1,2,3,4))
+model_predictions<-predict(regression_model,newdata=predicted_data)
+head(model_predictions,6)
+```
+As it can be seen from the above result, if the abdomen circumference in cm/100 is 1,2,3,4 then the bodyfat percentage will be 0.2385025, 0.8698061, 1.5011097, 2.1324133 respectively.This implies that using the regression model which is "body-fat=0.63130*abdomen-0.3928",the body-fat percentage can be calculated for any abdomen circumference.
+
+###interpreting the regression model
+-Residuals represent the distance from the data to the fitted line.Ideally they should be symmetrically distributed around the line. That is,the minimum and maximum residuals are expected to be in the same distance from zero. The same is true for the 1st and 3rd quartile. The median is also expected to be close zero.
+
+-The estimated intercept is -0.39, This  means if the abdomen circumference is zero then body-fat is 
+0.39.However this is not practically true as the abdomen circumference can not be zero.
+
+-The coefficient of abdomen(x) or the slope is 0.63. This indicates that for each unit increase in the abdomen circumference measurement, the estimated body fat increases by 0.63130.
+         
+-So the regression model formula will be: body-fat=0.63130*abdomen-0.3928
+
+-Multiple R-squared is 0.6617, indicating that about 66.17% of the variability in body fat can be explained by the abdomen circumference.Adjusted R-squared takes into account the number of predictors in the model and adjusts R-squared accordingly. The adjusted R-squared is 0.6603(66.03%).
+
+-p-value is remarkably low (< 2.2e-16), indicating that the regression model as a whole is highly statistically significant.
+
+###The strengths and limitations of using Abdomen circumference to predict body fat percentage
+####Strengths
+-The coefficient estimate for Abdomen circumference of 0.63130 indicates a positive and significant association with body fat percentage. This implies that as Abdomen circumference increases, body fat percentage tends to increase as well.
+
+-The high t-value of 22.11 and the extremely low p-value (<2e-16) demonstrate a strong statistical significance, indicating that the relationship between Abdomen circumference and body fat percentage is highly unlikely to be due to chance.
+
+-With a multiple R-squared value of 0.6617, around 66.17% of the variation in body fat percentage can be explained by the variation in Abdomen circumference. This suggests that Abdomen circumference has a relatively strong predictive ability for body fat percentage.
+
+####Limitations
+-The analysis assumes a linear relationship between Abdomen circumference and body fat percentage. However, if the actual relationship is non-linear, the model may fail to accurately capture the true association.
+
+-The model's limitation lies in its sole consideration of Abdomen circumference as the predictor for body fat percentage. Other influential factors, such as age, gender, and overall body composition, may also have an impact. Failing to account for these factors could restrict the accuracy and comprehensiveness of the predictions.
+
+-The strength of the relationship observed in this specific data-set may not be universally applicable to other populations or individuals. It is important to carefully consider the model's relevance and generalizability to different groups or settings.
+
+###Practical Implications
+From all the above analysis it can be concluded that measuring Abdomen circumference can be a useful indicator of body fat levels and Abdomen circumference can be used to estimate body fat percentage with a reasonable degree of accuracy.
+Here are some practical applications of this relationship
+
+1,Health- Abdomen circumference can serve as a screening tool in health assessments to identify individuals who may be at an increased risk of health issues related to obesity. Healthcare providers can measure Abdomen circumference to assess the presence of excess body fat, which has associations with conditions like cardiovascular disease, diabetes, and metabolic syndrome. This information can help healthcare professionals identify individuals who may require further evaluation or interventions to mitigate their risk of obesity-related health problems.
+
+2,Fitness-Abdomen circumference can be utilized in fitness evaluations to evaluate body composition and track progress.This comprehensive approach enables fitness professionals to provide tailored recommendations and track individuals' body composition improvements as they work towards their fitness goals.
+
+3,Nutrition- Nutritionists and dietitians can incorporate Abdomen circumference measurements into their practice to offer customized guidance. nutrition professionals can create personalized meal plans and dietary strategies aimed at reducing fat depending on the abdomen circumference.
